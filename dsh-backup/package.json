@@ -3,7 +3,6 @@
   "description": "Automated, UI-managed backup and restore for DeepSeek Harness: full+incremental backups of sessions, memory, and config, with a settings card showing history and a restore button.",
   "version": "0.1.1",
   "type": "module",
-  "private": true,
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",

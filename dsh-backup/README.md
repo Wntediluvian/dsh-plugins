@@ -48,6 +48,15 @@ DeepSeek Harness 的自动备份与还原插件。在设置页提供完整界面
 - Node.js ≥ 22（dsh 自带所需运行时，插件本身仅用 node 内置模块）
 
 ### 安装步骤
+
+**方式一：npm 安装（推荐）**
+```bash
+npm install dsh-backup
+dsh plugin --profile web add dsh-backup
+```
+> `dsh plugin add` 会自动完成注册；若你的 dsh 版本不支持该命令，手动在 `$DSH_HOME/profiles/web/package.json` 的 `dsh.profile.bundles` 中追加 `"dsh-backup"` 即可。
+
+**方式二：Git 克隆（从源码安装）**
 ```bash
 # 克隆本仓库
 git clone https://github.com/Wntediluvian/dsh-plugins.git

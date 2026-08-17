@@ -15,9 +15,12 @@
 以 dsh-backup 为例：
 
 ```bash
-# 克隆本仓库
+# npm 安装（推荐）
+npm install dsh-backup
+dsh plugin --profile web add dsh-backup
+
+# 或克隆本仓库，将插件目录放入 web profile 的 node_modules
 git clone https://github.com/Wntediluvian/dsh-plugins.git
-# 将插件目录放入 web profile 的 node_modules
 # 并在 profiles/web/package.json 的 dsh.profile.bundles 中加入 "dsh-backup"
 # 重启 dsh
 ```
