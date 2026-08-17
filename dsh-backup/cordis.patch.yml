@@ -1,0 +1,4 @@
+# dsh backup plugin — bundle layer: mount the backup engine.
+- insert:
+    - id: dsh-backup
+      name: 'dsh-backup'
