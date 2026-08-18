@@ -1,8 +1,9 @@
 // dsh-backup: browser half — settings card with backup status, history,
 // one-click backup, and guarded restore.
 //
-// Registered through `settings.general.item` (General Settings, same surface
-// as aqua) and `settings.plugin.item` (plugin list). Talks to the host routes:
+// Registered through `settings.plugin.item` (Plugins → Plugin Configuration,
+// same list as dsh-restart; presence requires the host-side settings
+// namespace `dsh-backup`). Talks to the host routes:
 //   GET  /dsh-backup/status
 //   GET  /dsh-backup/history
 //   POST /dsh-backup/backup   { type }
@@ -20,6 +21,17 @@ window.__ModuleLoader__.load({
 
     // ---- styles (aqua-style, injected once) -------------------------------
     var css = [
+      '.dshbk_wrap{list-style:none;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-3);transition:border-color .16s,background .16s}',
+      '.dshbk_wrap:hover{border-color:var(--dsw-alias-label-dimmed)}',
+      '.dshbk_wrapOpen{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-label-dimmed)}',
+      '.dshbk_wrapHead{width:100%;appearance:none;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px}',
+      '.dshbk_wrapHeadText{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}',
+      '.dshbk_wrapName{font-size:15px;font-weight:600;line-height:1.4;color:var(--dsw-alias-label-primary)}',
+      '.dshbk_wrapDesc{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-tertiary)}',
+      '.dshbk_wrapChevron{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .16s}',
+      '.dshbk_wrapChevronOpen{transform:rotate(180deg)}',
+      '.dshbk_wrapBody{border-top:1px solid var(--dsw-alias-border-l2);padding:0 16px 12px}',
+      '.dshbk_wrapBody .dshbk_panel{border:none;background:0 0;padding:0;margin:0;box-shadow:none}',
       '.dshbk_panel{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:12px;flex-direction:column;gap:0;padding:14px 16px;margin:4px 0 12px;display:flex}',
       '.dshbk_head{flex-direction:row;align-items:center;gap:8px;padding-bottom:10px;margin-bottom:4px;display:flex}',
       '.dshbk_icon{width:22px;height:22px;color:var(--dsw-alias-state-business-primary);flex:none;align-items:center;justify-content:center;display:inline-flex}',
@@ -112,6 +124,7 @@ window.__ModuleLoader__.load({
       var [busy, setBusy] = useState(false)
       var [restoreBusy, setRestoreBusy] = useState(false)
       var [selected, setSelected] = useState('')
+      var [open, setOpen] = useState(false)
       var [scope, setScope] = useState('memory')
       var [message, setMessage] = useState(null)
       var [error, setError] = useState(null)
@@ -274,11 +287,19 @@ window.__ModuleLoader__.load({
       extras.push(React.createElement('div', { className: 'dshbk_groupHint' },
         '备份策略：' + (cfgDraft ? intervalLabel(cfgDraft.fullIntervalHours) : '每月') + '全量（保留' + (cfgDraft ? cfgDraft.fullRetention : 2) + '份）、' + (cfgDraft ? intervalLabel(cfgDraft.incrementIntervalHours) : '每日') + '增量（保留' + (cfgDraft ? cfgDraft.incrementRetention : 30) + '天）；启动 / 定时检查 / 会话结束时自动备份。'))
 
-      // 整体：独立容器，与上方"外观"、下方"模式"等 dsh 原生区块清晰隔开
-      return React.createElement('div', { className: 'dshbk_panel' },
+      // 整体：可折叠卡片外壳（与 DSH重启等插件配置卡片一致）
+      var content = React.createElement('div', { className: 'dshbk_panel' },
         panelHead,
         statusGroup, backupGroup, restoreGroup, settingsGroup,
         extras)
+      return React.createElement('li', { className: 'dshbk_wrap' + (open ? ' dshbk_wrapOpen' : '') },
+        React.createElement('button', { type: 'button', className: 'dshbk_wrapHead', 'aria-expanded': open, onClick: function () { setOpen(!open) } },
+          React.createElement('span', { className: 'dshbk_wrapHeadText' },
+            React.createElement('span', { className: 'dshbk_wrapName' }, '备份'),
+            React.createElement('span', { className: 'dshbk_wrapDesc' }, 'dsh 数据备份与还原')),
+          React.createElement('svg', { className: 'dshbk_wrapChevron' + (open ? ' dshbk_wrapChevronOpen' : ''), width: '14', height: '14', viewBox: '0 0 14 14', 'aria-hidden': 'true' },
+            React.createElement('path', { d: 'M3.5 5.5 7 9l3.5-3.5', fill: 'none', stroke: 'currentColor', strokeWidth: '1.5', strokeLinecap: 'round', strokeLinejoin: 'round' }))),
+        open ? React.createElement('div', { className: 'dshbk_wrapBody' }, content) : null)
     }
 
     // ---- slot registration ------------------------------------------------
@@ -287,18 +308,10 @@ window.__ModuleLoader__.load({
       // client-side inject contract), so ctx.slots is available directly —
       // the same pattern as dsh-client-ui-aqua.
       try { react = require('react') } catch (e) { console.error('[dsh-backup] react unavailable:', e?.message ?? e); return }
-      // 通用设置页区块（与 aqua 外观设置同级，层级浅、方便操作）
-      ctx.slots.inject('settings.general.item', function* () {
-        yield ctx.slots.register({ name: 'settings.general.item', id: 'dsh-backup', order: 11 }, function (cardProps) {
-          return BackupCard(cardProps)
-        })
-      })
-      // 插件列表卡片
-      ctx.slots.inject('settings.plugin.item', function* () {
-        yield ctx.slots.register({ name: 'settings.plugin.item', key: 'dsh-backup', order: 20 }, function (cardProps) {
-          return BackupCard(cardProps)
-        })
-      })
+      // 插件配置卡片（设置 → 插件 → 插件配置，与 DSH重启同列表）
+      ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({ name: 'settings.plugin.item', key: 'dsh-backup', order: 20 }, function (cardProps) {
+        return BackupCard(cardProps)
+      }))
     }
 
     // Standard cordis client-plugin contract: the loader calls apply(ctx).

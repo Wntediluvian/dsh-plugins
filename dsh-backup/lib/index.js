@@ -27,6 +27,12 @@ import { existsSync, createReadStream, createWriteStream, readFileSync, writeFil
 import { join, basename, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
+// Register a settings namespace so the backup card appears in the Plugins →
+// Plugin Configuration list (the tab only renders cards for namespaces the
+// host serves). The card's own config still lives in 备份工作目录/config.json;
+// this namespace is a presence marker, not a second config source.
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import z from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-backup'
 export const inject = ['sessions']
@@ -135,6 +141,15 @@ export function apply(ctx, config = {}) {
         log('route registration failed:', e?.message ?? e)
       }
     })
+    // Register a settings namespace so the backup card appears in the
+    // Plugins → Plugin Configuration list (presence marker only; the card's
+    // config stays in 备份工作目录/config.json).
+    try {
+      installSettingsSection(ctx, settingsNamespace('dsh-backup'), z.object({}), {}, { setSource: () => {}, onChange: () => {} })
+      log('settings namespace registered: dsh-backup')
+    } catch (e) {
+      log('settings namespace registration failed:', e?.message ?? e)
+    }
   } else {
     log('no ctx.inject; routes skipped')
   }

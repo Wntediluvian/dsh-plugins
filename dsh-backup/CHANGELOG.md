@@ -2,10 +2,22 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.3] - 2026-08-19
+
+### Added
+- **注册 settings namespace**：`installSettingsSection(ctx, settingsNamespace('dsh-backup'), ...)` —— 使「DSH 备份」卡片出现在 设置 → 插件 → 插件配置 列表（与 DSH 重启同列表）。此前仅注册 `settings.plugin.item` 不生效（该页只渲染有 namespace 的插件）
+- **可折叠卡片外壳**：备份卡片加 `<li>` + 标题栏 + 折叠箭头（与 DSH 重启外观一致），默认折叠
+
+### Changed
+- **移除通用设置页卡片**：备份卡片只出现在插件配置页，不再出现在通用设置页（去掉 `settings.general.item` 注册）
+
+### Fixed
+- **插件列表卡片此前一直不显示**：真正根因是缺 settings namespace（0.2.2 的 key 修复是必要条件但非充分条件）
+
 ## [0.2.2] - 2026-08-19
 
 ### Fixed
-- **插件列表卡片不显示**：`settings.plugin.item` 是 **keyed slot**，注册必须用 `key` 字段；之前误用 `id`（list slot 的字段）导致注册被 slots 系统拒绝、卡片静默不显示。修复：`id: 'dsh-backup'` → `key: 'dsh-backup'`。现在「DSH 备份」卡片正确显示在 设置 → 插件 列表（order 20，DSH 重启上方）
+- **插件列表卡片不显示（部分）**：`settings.plugin.item` 是 keyed slot 需用 `key`（已改）。**注：完整根因是缺 settings namespace，见 0.2.3**
 
 ## [0.2.1] - 2026-08-18
 
