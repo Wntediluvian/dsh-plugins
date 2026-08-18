@@ -2,5 +2,5 @@
 # DeepSeek Harness profile bundle.
 - insert:
     - id: dsh-dock
-      name: dsh-dock
+      name: '@wntediluvian/dsh-dock'
       config: {}

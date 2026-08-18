@@ -15,7 +15,7 @@
  * `sidebar.footer.action` slot.
  */
 window.__ModuleLoader__.load({
-	id: "dsh-dock",
+	id: "@wntediluvian/dsh-dock",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

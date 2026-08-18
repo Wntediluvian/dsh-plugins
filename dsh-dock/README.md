@@ -18,13 +18,19 @@ A **persistent balance dock** with **process control (restart / stop)** for the 
 ## 📦 Install
 
 ```bash
+dsh plugin --profile web add @wntediluvian/dsh-dock
+```
+
+Or from the repo (development):
+
+```bash
 dsh plugin --profile web add github:Wntediluvian/dsh-plugins#path:/dsh-dock
 ```
 
-Or from a local checkout:
+Or install from a local checkout (dev only):
 
 ```bash
-dsh plugin --profile web add file:D:\Program Files\harness\git\dsh-plugins\dsh-dock
+dsh plugin --profile web add file:<local-path>/dsh-dock
 ```
 
 ## 🧩 What replaced what

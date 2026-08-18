@@ -1,8 +1,7 @@
 {
-  "name": "dsh-dock",
+  "name": "@wntediluvian/dsh-dock",
   "description": "Persistent balance dock + process control (restart/stop) for the dsh web GUI",
   "version": "0.1.0",
-  "private": true,
   "keywords": [
     "deepseek",
     "deepseek-harness",
