@@ -1,7 +1,7 @@
 {
   "name": "@wntediluvian/dsh-backup",
   "description": "Automated, UI-managed backup and restore for DeepSeek Harness: full+incremental backups of sessions, memory, user-installed plugins, skills, and config, with a settings card showing history and a restore button.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

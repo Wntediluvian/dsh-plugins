@@ -2,6 +2,12 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.1] - 2026-08-18
+
+### Fixed
+- **作用域包加载失败**：`cordis.patch.yml` 中插件挂载名仍为旧裸名 `dsh-backup`，导致 loader 按包名 import 时报 `Cannot find package 'dsh-backup'`。修复：改为完整包名 `@wntediluvian/dsh-backup`
+- **客户端模块注册失败**：`client.js` 中 `__ModuleLoader__.load({ id: 'dsh-backup' })` 注册名与包名不符，导致客户端报 `loaded without registering "@wntediluvian/dsh-backup"`。修复：改为 `id: '@wntediluvian/dsh-backup'`（与 modlens 的作用域包模式一致：patch name / client id 用完整包名，代码内注册名保留短名）
+
 ## [0.2.0] - 2026-08-18
 
 ### Changed
