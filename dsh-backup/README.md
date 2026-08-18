@@ -29,8 +29,13 @@ DeepSeek Harness 的自动备份与还原插件。在设置页提供完整界面
 - **对 dsh 可恢复**：备份保留原始会话文件（`session.jsonl.zstd`）+ storages，可直接放回数据目录
 - **对人类可读**：自动生成 `记忆归档\<项目>\记忆.md`——按**时间顺序**的完整时间线（会话标题、用户消息原文、关键操作），按项目自动分类
 
+### 插件与技能备份（自动发现）
+- **插件本体**：自动发现并备份**用户自装插件**（读取 profile `package.json` 的 `dependencies`，自动排除官方 `@deepseek-ai` 包）——插件代码 + 自带配置
+- **技能**：自动备份 `$DSH_HOME/skills\` 下全部用户技能（如 ponytail 系列）
+- **无需手动配置**：以后新装插件或技能，下次备份自动包含，无需改代码或重启
+
 ### 还原
-- 一键还原：选择备份点 → 选范围（仅会话+记忆 / +配置）→ 二次确认
+- 一键还原：选择备份点 → 选范围（会话+记忆 / +配置 / +插件）→ 二次确认
 - **还原前自动快照**当前状态到「还原前快照」
 - **API key 永不覆盖**：`.credentials.yaml`、`modlens-config.json` 结构性排除
 
@@ -51,10 +56,10 @@ DeepSeek Harness 的自动备份与还原插件。在设置页提供完整界面
 
 **方式一：npm 安装（推荐）**
 ```bash
-npm install dsh-backup
-dsh plugin --profile web add dsh-backup
+npm install @wntediluvian/dsh-backup
+dsh plugin --profile web add @wntediluvian/dsh-backup
 ```
-> `dsh plugin add` 会自动完成注册；若你的 dsh 版本不支持该命令，手动在 `$DSH_HOME/profiles/web/package.json` 的 `dsh.profile.bundles` 中追加 `"dsh-backup"` 即可。
+> `dsh plugin add` 会自动完成注册；若你的 dsh 版本不支持该命令，手动在 `$DSH_HOME/profiles/web/package.json` 的 `dsh.profile.bundles` 中追加 `"@wntediluvian/dsh-backup"` 即可。
 
 **方式二：Git 克隆（从源码安装）**
 ```bash
@@ -101,7 +106,7 @@ dsh-backup/
 | GET | `/dsh-backup/status` | 备份状态 |
 | GET | `/dsh-backup/history` | 备份历史 |
 | POST | `/dsh-backup/backup` | `{type:'full'\|'incremental'}` 立即备份 |
-| POST | `/dsh-backup/restore` | `{backup:<路径>, scope:'memory'\|'config'}` 还原 |
+| POST | `/dsh-backup/restore` | `{backup:<路径>, scope:'memory'\|'config'\|'plugins'}` 还原 |
 | GET/POST | `/dsh-backup/config` | 读/写配置（热重载） |
 
 ---
@@ -133,12 +138,16 @@ dsh-backup/
 │       ├── 会话\      ← 完整会话（原始层级）
 │       ├── storages\
 │       ├── 配置\      ← settings.yaml + 匿名ID（不含 API key）
-│       ├── 插件配置\
+│       ├── 插件配置\  ← web profile 配置（package.json / lock 等）
+│       ├── 插件本体\  ← 用户自装插件（代码 + 配置，自动发现）
+│       ├── 技能\      ← 用户技能（如 ponytail 系列）
 │       ├── 记忆归档\
 │       └── 备份清单.json
 ├── 增量备份\           ← 增量（保留 N 天）
 │   └── <时间戳>-增量\
 │       ├── 会话\      ← 有变化的会话
+│       ├── 插件本体\  ← 有变化的插件文件（骨架始终建立）
+│       ├── 技能\
 │       ├── 记忆归档\
 │       └── 变更记录.json
 └── 备份工作目录\        ← 运行时工作区（勿删）

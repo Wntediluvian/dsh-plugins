@@ -143,11 +143,16 @@ window.__ModuleLoader__.load({
 
       function doRestore() {
         if (!selected) { setError('请先选择一个备份点'); return }
-        if (!window.confirm('确定从该备份还原吗？\n\n将恢复会话与记忆' + (scope === 'config' ? '及配置（不含 API key）' : '') + '。\n还原前会自动备份当前状态到「还原前快照」。\n\nAPI key 永远不会被覆盖。')) return
+        var scopeLabel = scope === 'config' ? '及配置（不含 API key）' : (scope === 'plugins' ? '及插件本体' : '')
+        if (!window.confirm('确定从该备份还原吗？\n\n将恢复会话与记忆' + scopeLabel + '。\n还原前会自动备份当前状态到「还原前快照」。\n\nAPI key 永远不会被覆盖。')) return
         setRestoreBusy(true); setMessage(null); setError(null)
         api('/dsh-backup/restore', { method: 'POST', body: { backup: selected, scope: scope } })
           .then(function (r) {
-            setMessage('还原完成：' + r.restored.sessions + ' 个会话' + (r.restored.config.length ? '，配置：' + r.restored.config.join(', ') : '') + '。还原前快照：' + r.safetySnapshot)
+            var msg = '还原完成：' + r.restored.sessions + ' 个会话'
+            if (r.restored.config && r.restored.config.length) msg += '，配置：' + r.restored.config.join(', ')
+            if (r.restored.plugins && r.restored.plugins.length) msg += '，插件：' + r.restored.plugins.join(', ')
+            msg += '。还原前快照：' + r.safetySnapshot
+            setMessage(msg)
             refresh()
           })
           .catch(function (e) { setError(String(e.message)) })
@@ -229,7 +234,8 @@ window.__ModuleLoader__.load({
             })),
           React.createElement('div', { className: 'dshbk_segmented' },
             React.createElement('button', { className: scope === 'memory' ? 'dshbk_segActive' : 'dshbk_seg', onClick: function () { setScope('memory') } }, '会话+记忆'),
-            React.createElement('button', { className: scope === 'config' ? 'dshbk_segActive' : 'dshbk_seg', onClick: function () { setScope('config') } }, '+配置'))),
+            React.createElement('button', { className: scope === 'config' ? 'dshbk_segActive' : 'dshbk_seg', onClick: function () { setScope('config') } }, '+配置'),
+            React.createElement('button', { className: scope === 'plugins' ? 'dshbk_segActive' : 'dshbk_seg', onClick: function () { setScope('plugins') } }, '+插件'))),
         React.createElement('div', { className: 'dshbk_btnRow', style: { marginTop: '8px' } },
           React.createElement('button', { className: 'dshbk_btn dshbk_btnDanger', disabled: restoreBusy || !selected, onClick: doRestore }, restoreBusy ? '还原中…' : '执行还原')),
         React.createElement('div', { className: 'dshbk_groupHint' }, '还原前自动快照当前状态；API key（.credentials.yaml、modlens-config.json）永不覆盖。'))

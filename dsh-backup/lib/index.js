@@ -84,6 +84,13 @@ const NEVER_RESTORE = new Set([
 // Files that are excluded from "config"-scope backups too (keys never leave).
 const NEVER_BACKUP_KEYS = new Set(['.credentials.yaml', 'modlens-config.json', 'config.json'])
 
+// Plugin bodies: user-installed plugins live in the web profile's node_modules,
+// listed in package.json's dependencies. Official @deepseek-ai bundles and
+// transitive deps are excluded — they can be reinstalled from npm.
+const HOSTED_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
+// Files never copied into plugin-body backups (identity / keys / noise).
+const PLUGIN_SKIP = new Set(['.bin', '.cache', 'node_modules', '.git', 'dist'])
+
 export function apply(ctx, config = {}) {
   log('apply called, inject services:', JSON.stringify(config))
   // Load persisted user config from <default backupRoot>/备份工作目录/config.json.
@@ -262,6 +269,115 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
     return count
   }
 
+  // ---- user-installed plugins ---------------------------------------------
+  // Enumerate the plugins the user actually installed (package.json
+  // dependencies minus the official host bundles). Returns [{ name, dir }].
+  function userPlugins() {
+    const webProfile = join(DATA_ROOT, 'profiles', 'web')
+    const pjPath = join(webProfile, 'package.json')
+    if (!existsSync(pjPath)) return []
+    try {
+      const pj = JSON.parse(readFileSync(pjPath, 'utf8'))
+      const deps = pj?.dependencies && typeof pj.dependencies === 'object' ? pj.dependencies : {}
+      const out = []
+      for (const name of Object.keys(deps)) {
+        if (HOSTED_BUNDLES.has(name)) continue
+        const dir = join(webProfile, 'node_modules', name)
+        if (existsSync(dir)) out.push({ name, dir })
+      }
+      return out
+    } catch {
+      return []
+    }
+  }
+
+  // Copy the user-installed plugin bodies into <dst>/插件本体/<name>/.
+  // Skips identity/key files and heavy noise dirs; returns {name, files}[].
+  // The per-plugin dir is always created (even with 0 changed files) so the
+  // backup reliably reflects which plugins were installed at backup time.
+  async function copyPluginBodies(dst, opts = {}) {
+    const out = []
+    for (const p of userPlugins()) {
+      const target = join(dst, '插件本体', p.name)
+      await fs.mkdir(target, { recursive: true })
+      const count = await copyTree(p.dir, target, {
+        onlyNewerThan: opts.onlyNewerThan,
+        skipKeys: true,
+        excludeDirs: PLUGIN_SKIP,
+      })
+      out.push({ name: p.name, files: count })
+    }
+    return out
+  }
+
+  // ---- user-installed skills ----------------------------------------------
+  // Skills live outside node_modules, under $DSH_HOME/skills/<name>/ (e.g. the
+  // ponytail set). Copy them into <dst>/技能/<name>/.
+  function skillsRoot() {
+    return join(DATA_ROOT, 'skills')
+  }
+
+  async function copySkills(dst, opts = {}) {
+    const src = skillsRoot()
+    if (!existsSync(src)) return { skills: [], files: 0 }
+    let files = 0
+    const names = []
+    const entries = await fs.readdir(src, { withFileTypes: true })
+    for (const e of entries) {
+      if (!e.isDirectory()) continue
+      names.push(e.name)
+      const target = join(dst, '技能', e.name)
+      await fs.mkdir(target, { recursive: true })
+      files += await copyTree(join(src, e.name), target, {
+        onlyNewerThan: opts.onlyNewerThan,
+        skipKeys: true,
+        excludeDirs: PLUGIN_SKIP,
+      })
+    }
+    return { skills: names, files }
+  }
+
+  // Restore skills from <backupPath>/技能 back into $DSH_HOME/skills.
+  async function restoreSkills(backupPath) {
+    const src = join(backupPath, '技能')
+    if (!existsSync(src)) return { restored: [], skipped: [] }
+    const dstRoot = skillsRoot()
+    const restored = []
+    const skipped = []
+    const entries = await fs.readdir(src, { withFileTypes: true })
+    for (const e of entries) {
+      if (!e.isDirectory()) continue
+      const d = join(dstRoot, e.name)
+      await copyTree(join(src, e.name), d, { skipKeys: true, excludeDirs: PLUGIN_SKIP })
+      restored.push(e.name)
+    }
+    return { restored, skipped }
+  }
+
+  // Restore plugin bodies from <backupPath>/插件本体 back into the web
+  // profile's node_modules. Never overwrites keys (handled by skipKeys).
+  async function restorePluginBodies(backupPath) {
+    const src = join(backupPath, '插件本体')
+    if (!existsSync(src)) return { restored: [], skipped: [] }
+    const webProfile = join(DATA_ROOT, 'profiles', 'web')
+    const restored = []
+    const skipped = []
+    const entries = await fs.readdir(src, { withFileTypes: true })
+    for (const e of entries) {
+      if (!e.isDirectory()) continue
+      const s = join(src, e.name)
+      const d = join(webProfile, 'node_modules', e.name)
+      // only restore plugins the profile actually declares
+      if (!userPlugins().some((p) => p.name === e.name)) {
+        skipped.push(e.name)
+        continue
+      }
+      await copyTree(s, d, { skipKeys: true, excludeDirs: PLUGIN_SKIP })
+      restored.push(e.name)
+    }
+    return { restored, skipped }
+  }
+
   // ---- full backup --------------------------------------------------------
   async function runFull() {
     await ensureDirs()
@@ -285,6 +401,10 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
       const s = join(webProfile, f)
       if (existsSync(s)) await copyFile(s, join(dir, '插件配置', `web-${f}`), true)
     }
+    // plugin bodies (user-installed plugins: code + their own config)
+    const pluginBodies = await copyPluginBodies(dir)
+    // user-installed skills (e.g. ponytail set)
+    const skills = await copySkills(dir)
     // memory archive (human-readable + session files)
     await copyTree(MEM_DIR(), join(dir, '记忆归档'))
     // regenerate memory archive from live sessions (fresh snapshot)
@@ -299,6 +419,8 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
       dataRoot: DATA_ROOT,
       sessionCount: await countFiles(join(dir, '会话')),
       sizeBytes: await dirSize(dir),
+      plugins: pluginBodies,
+      skills,
     }
     await fs.writeFile(join(dir, '备份清单.json'), JSON.stringify(manifest, null, 2), 'utf8')
 
@@ -355,6 +477,10 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
       const st = await fs.stat(settings).catch(() => null)
       if (st && st.mtimeMs >= cutoff) await copyFile(settings, join(dir, '配置', 'settings.yaml'), true)
     }
+    // plugin bodies (changed files only)
+    const pluginBodies = await copyPluginBodies(dir, { onlyNewerThan: cutoff })
+    // user-installed skills (changed files only)
+    const skills = await copySkills(dir, { onlyNewerThan: cutoff })
     // memory archive: always refresh for the touched projects
     await refreshMemoryArchive(MEM_DIR(), scope)
     await copyTree(MEM_DIR(), join(dir, '记忆归档'), { onlyNewerThan: cutoff })
@@ -366,6 +492,8 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
       refTime: refTime ? new Date(refTime).toISOString() : null,
       sessionCount,
       sizeBytes: await dirSize(dir),
+      plugins: pluginBodies,
+      skills,
     }
     await fs.writeFile(join(dir, '变更记录.json'), JSON.stringify(manifest, null, 2), 'utf8')
 
@@ -777,6 +905,17 @@ function createEngine({ backupRoot, fullRetention, incrementRetention, fullInter
           restored.config.push(f.name)
         }
       }
+    }
+
+    // plugin bodies (user-installed plugins) — only on explicit scope
+    let plugins = null
+    if (scope === 'plugins' || scope === 'all') {
+      plugins = await restorePluginBodies(backupPath)
+      restored.plugins = plugins.restored
+      restored.pluginSkipped = plugins.skipped
+      const skills = await restoreSkills(backupPath)
+      restored.skills = skills.restored
+      restored.skillsSkipped = skills.skipped
     }
 
     return {
