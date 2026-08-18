@@ -40,6 +40,15 @@ dsh plugin --profile web add file:<local-path>/dsh-dock
 | `dsh-usage` | balance dock / usage panel | merged → `dsh-dock` |
 | `dsh-restart` | restart/stop process control | merged → `dsh-dock` |
 
+## 🙏 Credits
+
+`dsh-dock` merges two upstream MIT-licensed plugins:
+
+- **dsh-usage** — balance dock / token-usage panel (original copyright © dsh-usage contributors)
+- **dsh-restart** — restart/stop process control (original copyright © dsh-restart contributors)
+
+Their LICENSE texts are preserved in this repo's `LICENSE`. Feature requests / issues for the merged behavior can be filed here; the upstream projects remain the source of the original logic.
+
 After installing `dsh-dock`, remove `dsh-usage` and `dsh-restart` from the profile to avoid duplicate docks/buttons:
 
 ```bash
