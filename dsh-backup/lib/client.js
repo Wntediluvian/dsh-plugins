@@ -295,7 +295,7 @@ window.__ModuleLoader__.load({
       })
       // 插件列表卡片
       ctx.slots.inject('settings.plugin.item', function* () {
-        yield ctx.slots.register({ name: 'settings.plugin.item', id: 'dsh-backup', order: 20 }, function (cardProps) {
+        yield ctx.slots.register({ name: 'settings.plugin.item', key: 'dsh-backup', order: 20 }, function (cardProps) {
           return BackupCard(cardProps)
         })
       })

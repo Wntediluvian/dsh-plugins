@@ -2,6 +2,11 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.2] - 2026-08-19
+
+### Fixed
+- **插件列表卡片不显示**：`settings.plugin.item` 是 **keyed slot**，注册必须用 `key` 字段；之前误用 `id`（list slot 的字段）导致注册被 slots 系统拒绝、卡片静默不显示。修复：`id: 'dsh-backup'` → `key: 'dsh-backup'`。现在「DSH 备份」卡片正确显示在 设置 → 插件 列表（order 20，DSH 重启上方）
+
 ## [0.2.1] - 2026-08-18
 
 ### Fixed
