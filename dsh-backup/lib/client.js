@@ -13,7 +13,7 @@
 // aqua design language: injected <style> with --dsw-alias-* theme variables,
 // group/subGroup/row layout, segmented controls.
 window.__ModuleLoader__.load({
-  id: 'dsh-backup',
+  id: '@wntediluvian/dsh-backup',
   factory: (require) => {
     var module = { exports: {} }
     var exports = module.exports
