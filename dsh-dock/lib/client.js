@@ -2116,44 +2116,50 @@ window.__ModuleLoader__.load({
 				order: 10
 			}, UsagePanel));
 			// Process-control settings card (merged from dsh-restart).
-			ensureCardStyles();
-			const scope = ctx.settingsScope.bind({ namespace: "dsh-dock" });
-			const project = () => {
-				const snap = scope.getSnapshot();
-				const value = snap.value ?? {};
-				return {
-					available: snap.status === "ready",
-					writable: snap.writable,
-					legacyRestart: value.legacyRestart === true,
-					continuePrompt: typeof value.continuePrompt === "string" ? value.continuePrompt : "",
-					watchdogEnabled: value.watchdogEnabled === true,
-					watchdogCooldownMs: typeof value.watchdogCooldownMs === "number" ? value.watchdogCooldownMs : 0,
-					watchdogPollMs: typeof value.watchdogPollMs === "number" ? value.watchdogPollMs : 0
+			// Wrapped in try-catch so a settings-scope failure can never take the
+			// balance dock down with it (issue: dock showed but card did not).
+			try {
+				ensureCardStyles();
+				const scope = ctx.settingsScope.bind({ namespace: "dsh-dock" });
+				const project = () => {
+					const snap = scope.getSnapshot();
+					const value = snap.value ?? {};
+					return {
+						available: snap.status === "ready",
+						writable: snap.writable,
+						legacyRestart: value.legacyRestart === true,
+						continuePrompt: typeof value.continuePrompt === "string" ? value.continuePrompt : "",
+						watchdogEnabled: value.watchdogEnabled === true,
+						watchdogCooldownMs: typeof value.watchdogCooldownMs === "number" ? value.watchdogCooldownMs : 0,
+						watchdogPollMs: typeof value.watchdogPollMs === "number" ? value.watchdogPollMs : 0
+					};
 				};
-			};
-			const store = _runtime_client !== null
-				? (0, _runtime_client.createSnapshotStore)(project())
-				: { get: () => project(), set: () => {}, subscribe: () => () => {} };
-			if (_runtime_client !== null) {
-				scope.subscribe(() => {
-					store.set(project());
-				});
+				const store = _runtime_client !== null
+					? (0, _runtime_client.createSnapshotStore)(project())
+					: { get: () => project(), set: () => {}, subscribe: () => () => {} };
+				if (_runtime_client !== null) {
+					scope.subscribe(() => {
+						store.set(project());
+					});
+				}
+				ctx.slots.inject("settings.plugin.item", () => ctx.slots.register({
+					name: "settings.plugin.item",
+					key: "dsh-dock",
+					order: 40,
+					locale: CARD_NS,
+					inject: () => ({
+						hooks: { dshDock: store },
+						set: (field, value) => {
+							scope.set(field, value);
+						},
+						clear: (field) => {
+							scope.unset(field);
+						}
+					})
+				}, SettingsCard));
+			} catch (error) {
+				console.error("[dsh-dock] settings card registration failed:", error);
 			}
-			ctx.slots.inject("settings.plugin.item", () => ctx.slots.register({
-				name: "settings.plugin.item",
-				key: "dsh-dock",
-				order: 40,
-				locale: CARD_NS,
-				inject: () => ({
-					hooks: { useDshDock: store },
-					set: (field, value) => {
-						scope.set(field, value);
-					},
-					clear: (field) => {
-						scope.unset(field);
-					}
-				})
-			}, SettingsCard));
 		}
 		//#endregion
 
