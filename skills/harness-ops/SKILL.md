@@ -3,8 +3,9 @@ name: harness-ops
 description: >
   dsh（DeepSeek Harness）运维与故障排查技能。处理 dsh 无法启动、3080 端口
   异常、插件加载失败、npm 发布失败、npm EOTP/402/403、备份异常、进程管理、
-  隐私保护等问题时加载本技能。触发词：排查问题、启动失败、3080 无法启动、
-  dsh 报错、插件加载失败、npm 发布失败、备份异常、重启 dsh、harness-ops。
+  隐私保护、插件发布流程等问题时加载本技能。触发词：排查问题、启动失败、
+  3080 无法启动、dsh 报错、插件加载失败、npm 发布失败、备份异常、重启 dsh、
+  发布插件、发布流程、harness-ops。
 ---
 
 # dsh 运维经验（harness-ops）
@@ -47,3 +48,15 @@ dsh 故障排查的**快速入口**。本文件为**通用公开版**（可随�
 - [ ] 三处一致性：git 仓库 / npm 包 / 本地安装目录哈希一致
 - [ ] 告知用户重启，重启后验证：`/dsh-backup/status`、`/dsh-backup/config`、触发增量备份看 manifest
 - [ ] **发布前隐私扫描**：确认无本机路径 / 用户名 / token / API key（见铁律 5）
+
+## 发布流程（git + npm 整体更新，严格按顺序）
+
+1. **改前定版本**：修复 → patch (+1)；新功能 → minor (+1)；破坏 → major
+2. **代码检查**：`node --check` 两个文件；改名场景查三层（package.json / cordis.patch.yml / client.js load id）；三处哈希一致
+3. **版本检查**：`npm view` 确认线上版本 < 本地版本；CHANGELOG 加条目
+4. **内容检查**：README 版本/功能/安装命令最新；无"（待办）（当前环境）"话术；`npm pack --dry-run` 看文件清单
+5. **隐私检查**：扫描盘符路径 / 用户名 / `ghp_` / `npm_` / 数据目录；含本机信息只存本地
+6. **安全检查**：token 不落盘不提交；无硬编码密钥；API key 在 NEVER 集合；仅 loopback
+7. **本地验证**：API status/config 200；触发增量备份看 manifest 的 plugins/skills
+8. **发布顺序**：① `git push` → ② `npm publish --access public` → ③ 验证（重复 publish 报 403=已成功 / jsDelivr 200 / npm view）
+9. **网络坑**：`schannel: SSL/TLS connection failed` = VPN/代理问题，查代理端口或切换 VPN 模式
