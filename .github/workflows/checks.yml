@@ -1,0 +1,23 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: 语法检查与清单校验 / Syntax and manifest check
+        run: |
+          set -e
+          find . -path ./.git -prune -o -name '*.mjs' -print -o -name '*.js' -print | xargs -r -n1 node --check
+          for f in $(find . -path ./.git -prune -o -name package.json -print); do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"; done
